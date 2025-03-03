@@ -13,12 +13,12 @@ public abstract class Order {
      *
      * @param orderID   ID Univoco per identificare l'ordine
      * @param typeAB    enum per identificare se si tratta di un ordine di ASK o BID
-     * @param orderType enum per identidicare il tipo di ordine
+     * @param ordertype enum per identidicare il tipo di ordine
      * @param size      numero di coin da vendere/comprare
      * @param price     prezzo singola coin
      * @param timestamp Data creazione dell'orcine
      */
-    public Order(int orderID, TypeAB typeAB, TypeAB ordertype, int size, int price, long timestamp) {
+    public Order(int orderID, TypeAB typeAB, orderType ordertype, int size, int price, long timestamp) {
         this.orderID = orderID;
         this.typeAB = typeAB;
         this.ordertype = ordertype;
@@ -50,7 +50,7 @@ public abstract class Order {
      *
      * @return MarketOrder, LimitOrder, StopOrder
      */
-    public TypeAB getOrdertype() {
+    public orderType getOrdertype() {
         return ordertype;
     }
 

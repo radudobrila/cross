@@ -1,0 +1,11 @@
+{
+  "a" : {
+    "hashedPassword" : "$2a$12$H.DVxYpNtmCuB6xAtGHQ/uUp2EI87ZM5I.J.nQxXCxM/3iEz26aLy"
+  },
+  "b" : {
+    "hashedPassword" : "$2a$12$n5L9D1ssUVny0fjP5EztXO0iJsP/peM8lx1/nxZnE0eQImEHpGT1m"
+  },
+  "c" : {
+    "hashedPassword" : "$2a$12$Lu4RoMLxITwu3mQDQfPJ1OjkC0CGAVejaatZ8IqcP5nJZPYMEaI9S"
+  }
+}

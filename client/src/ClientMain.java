@@ -51,7 +51,7 @@ public class ClientMain {
                             InetAddress addr = addresses.nextElement();
                             if (addr instanceof Inet4Address && !addr.isLoopbackAddress() && !addr.isLinkLocalAddress()) {
                                 localClientIp = addr.getHostAddress();
-                                System.out.println("Client: Trovato IP locale valido per multicast: " + localClientIp + " su interfaccia: " + ni.getDisplayName());
+                                System.out.println("Client: Found valid local IP for multicast: " + localClientIp + " on interface: " + ni.getDisplayName());
                                 break;
                             }
                         }
@@ -63,12 +63,12 @@ public class ClientMain {
 
                 if (localClientIp == null) {
                     localClientIp = InetAddress.getLocalHost().getHostAddress();
-                    System.out.println("Client: Fallback - Usando InetAddress.getLocalHost().getHostAddress(): " + localClientIp);
+                    System.out.println("Client: Fallback - Using InetAddress.getLocalHost().getHostAddress(): " + localClientIp);
                 }
-                System.out.println("Indirizzo IP del Client per UDP Unicast e Multicast: " + localClientIp);
+                System.out.println("Client IP address for UDP Unicast and Multicast: " + localClientIp);
 
             } catch (SocketException | UnknownHostException e) {
-                System.err.println("Client: Errore durante la determinazione dell'IP locale: " + e.getMessage());
+                System.err.println("Client: Error determining local IP: " + e.getMessage());
             }
 
             client.connect();
@@ -77,7 +77,7 @@ public class ClientMain {
             try (DatagramSocket tempSocket = new DatagramSocket()) {
                 clientUdpUnicastPort = tempSocket.getLocalPort();
             } catch (SocketException e) {
-                System.err.println("Impossibile ottenere una porta UDP effimera: " + e.getMessage());
+                System.err.println("Could not obtain an ephemeral UDP port: " + e.getMessage());
                 return;
             }
 
@@ -100,80 +100,88 @@ public class ClientMain {
                     try {
                         choice = Integer.parseInt(choiceStr);
                     } catch (NumberFormatException e) {
-                        System.out.println("Input non valido. Inserisci un numero.");
+                        System.out.println("Invalid input. Please enter a number.");
                         continue;
                     }
 
-                    if (choice == 1) {
-                        System.out.println("Enter username: ");
-                        String username = scanner.nextLine();
-                        System.out.println("Enter password: ");
-                        String password = scanner.nextLine();
-
-                        try {
-                            RegisterInterface stub = (RegisterInterface) Naming.lookup("rmi://localhost:1099/RegisterService");
-                            int result = stub.Register(username, password);
-
-                            if (result == 100) {
-                                System.out.println("Register successful.");
-                            } else if (result == 101) {
-                                System.out.println("Invalid password (min 2 characters).");
-                            } else if (result == 102) {
-                                System.out.println("Username already in use.");
-                            } else {
-                                System.out.println("Unknown error.");
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-
-                    } else if (choice == 2) {
-                        System.out.println("Enter username: ");
-                        String username = scanner.nextLine();
-                        System.out.println("Enter password: ");
-                        String password = scanner.nextLine();
-
-                        isLogged = client.sendLogin(username, password, localClientIp, clientUdpUnicastPort);
-                        actualUsername = username;
-
-                        if (isLogged) {
-                            System.out.print("Do you want to receive BTC price notifications? (1-Yes/0-No): ");
-                            String priceNotifChoiceStr = scanner.nextLine().trim();
+                    switch (choice) {
+                        case 1:
+                            System.out.println("Enter username: ");
+                            String username = scanner.nextLine();
+                            System.out.println("Enter password: ");
+                            String password = scanner.nextLine();
 
                             try {
-                                int priceNotifChoice = Integer.parseInt(priceNotifChoiceStr);
+                                RegisterInterface stub = (RegisterInterface) Naming.lookup("rmi://localhost:1099/RegisterService");
+                                int result = stub.Register(username, password);
 
-                                if (priceNotifChoice == 1) {
-                                    client.sendRegisterPriceInterest(actualUsername, MULTICAST_PRICE_PORT);
-                                    udpMulticastPriceListener.joinMulticastGroup();
-                                    System.out.println("You are now subscribed to BTC price notifications (via Multicast).");
-                                } else if (priceNotifChoice == 0) {
-                                    System.out.println("Skipping BTC price notifications setup.");
-                                    udpMulticastPriceListener.setSubscriptionDisplayStatus(false);
+                                if (result == 100) {
+                                    System.out.println("Register successful.");
+                                } else if (result == 101) {
+                                    System.out.println("Invalid password (min 2 characters).");
+                                } else if (result == 102) {
+                                    System.out.println("Username already in use.");
                                 } else {
+                                    System.out.println("Unknown error.");
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                            break;
+                        case 2:
+                            System.out.println("Enter username: ");
+                            username = scanner.nextLine();
+                            System.out.println("Enter password: ");
+                            password = scanner.nextLine();
+
+                            isLogged = client.sendLogin(username, password, localClientIp, clientUdpUnicastPort);
+                            actualUsername = username;
+
+                            if (isLogged) {
+                                System.out.print("Do you want to receive BTC price notifications? (1-Yes/0-No): ");
+                                String priceNotifChoiceStr = scanner.nextLine().trim();
+
+                                try {
+                                    int priceNotifChoice = Integer.parseInt(priceNotifChoiceStr);
+
+                                    if (priceNotifChoice == 1) {
+                                        client.sendRegisterPriceInterest(actualUsername, MULTICAST_PRICE_PORT);
+                                        udpMulticastPriceListener.joinMulticastGroup();
+                                        System.out.println("You are now subscribed to BTC price notifications (via Multicast).");
+                                    } else if (priceNotifChoice == 0) {
+                                        System.out.println("Skipping BTC price notifications setup.");
+                                        udpMulticastPriceListener.setSubscriptionDisplayStatus(false);
+                                    } else {
+                                        System.out.println("Invalid input. Please enter 1 or 0. Skipping BTC price notifications setup.");
+                                        udpMulticastPriceListener.setSubscriptionDisplayStatus(false);
+                                    }
+                                } catch (IOException e) {
+                                    System.err.println("I/O Error during multicast subscription: " + e.getMessage());
+                                    udpMulticastPriceListener.setSubscriptionDisplayStatus(false);
+                                } catch (NumberFormatException e) {
                                     System.out.println("Invalid input. Please enter 1 or 0. Skipping BTC price notifications setup.");
                                     udpMulticastPriceListener.setSubscriptionDisplayStatus(false);
                                 }
-                            } catch (IOException e) {
-                                System.err.println("Errore I/O durante la sottoscrizione multicast: " + e.getMessage());
-                                udpMulticastPriceListener.setSubscriptionDisplayStatus(false);
-                            } catch (NumberFormatException e) {
-                                System.out.println("Invalid input. Please enter 1 or 0. Skipping BTC price notifications setup.");
-                                udpMulticastPriceListener.setSubscriptionDisplayStatus(false);
                             }
-                        }
+                            break;
+                        case 3:
+                            System.out.println("Enter username: ");
+                            username = scanner.nextLine();
+                            System.out.println("Enter password: ");
+                            password = scanner.nextLine();
+                            System.out.println("Enter new password: ");
+                            String newPassword = scanner.nextLine();
 
-                    } else if (choice == 3) {
-                        System.out.println("Enter username: ");
-                        String username = scanner.nextLine();
-                        System.out.println("Enter password: ");
-                        String password = scanner.nextLine();
-                        System.out.println("Enter new password: ");
-                        String newPassword = scanner.nextLine();
-
-                        client.sendUpdateCredentials(username, password, newPassword);
-                    } else if (choice == 4) {
-                        System.out.println("Exiting...");
+                            client.sendUpdateCredentials(username, password, newPassword);
+                            break;
+                        case 4:
+                            System.out.println("Exiting...");
+                            break;
+                        default:
+                            System.out.println("Invalid choice. Please select a valid option (1-4).");
+                            break;
+                    }
+                    if (choice == 4) {
                         break;
                     }
                 } else {
@@ -189,7 +197,7 @@ public class ClientMain {
                     try {
                         choice = Integer.parseInt(choiceStr);
                     } catch (NumberFormatException e) {
-                        System.out.println("Input non valido. Inserisci un numero.");
+                        System.out.println("Invalid input. Please enter a number.");
                         continue;
                     }
 
@@ -245,10 +253,15 @@ public class ClientMain {
                                 try {
                                     udpMulticastPriceListener.leaveMulticastGroup();
                                 } catch (IOException e) {
-                                    System.err.println("Errore durante il leaveGroup al logout: " + e.getMessage());
+                                    System.err.println("Error during leaveGroup on logout: " + e.getMessage());
+                                } finally {
+                                    udpMulticastPriceListener.stopListening();
                                 }
                             }
                             System.out.println("Logged out successfully.");
+                            break;
+                        default:
+                            System.out.println("Invalid choice. Please select a valid option (1-7).");
                             break;
                     }
                 }
@@ -263,19 +276,15 @@ public class ClientMain {
             if (udpUnicastExecutor != null) {
                 udpUnicastExecutor.shutdownNow();
             }
+
             if (udpMulticastPriceListener != null) {
-                try {
-                    udpMulticastPriceListener.leaveMulticastGroup();
-                } catch (IOException e) {
-                    System.err.println("Errore durante il leaveGroup nel finally: " + e.getMessage());
-                }
                 udpMulticastPriceListener.stopListening();
             }
             if (udpMulticastExecutor != null) {
                 udpMulticastExecutor.shutdownNow();
             }
             scanner.close();
-            System.out.println("Applicazione client terminata.");
+            System.out.println("Client application terminated.");
         }
     }
 }
